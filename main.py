@@ -67,23 +67,28 @@ class SimpleArbitrageStrategy:
         return table
 
     def find_arbitrage(self):
-        table = self.create_comparison_table()
-        for pair in table:
-            exchanges = table[pair]
-            for exchange in exchanges:
-                for compare_exchange in exchanges:
-                    if compare_exchange == exchange:
-                        continue
-                    exch_a = exchanges[exchange]
-                    exch_b = exchanges[compare_exchange]
-                    if exch_a['ask.price'] < exch_b['bid.price']:
-                        amount_to_buy = min(exch_a['ask.volume'], exch_b['bid.volume'])
-                        self.record_arbitrage(pair, exchange, exch_a['ask.price'], compare_exchange,
-                                              exch_b['bid.price'], amount_to_buy)
-                    if exch_b['ask.price'] < exch_a['bid.price']:
-                        amount_to_buy = min(exch_b['ask.volume'], exch_a['bid.volume'])
-                        self.record_arbitrage(pair, compare_exchange, exch_b['ask.price'], exchange,
-                                              exch_a['bid.price'], amount_to_buy)
+        try:
+            table = self.create_comparison_table()
+
+            for pair in table:
+                exchanges = table[pair]
+                for exchange in exchanges:
+                    for compare_exchange in exchanges:
+                        if compare_exchange == exchange:
+                            continue
+                        exch_a = exchanges[exchange]
+                        exch_b = exchanges[compare_exchange]
+                        if exch_a['ask.price'] < exch_b['bid.price']:
+                            amount_to_buy = min(exch_a['ask.volume'], exch_b['bid.volume'])
+                            self.record_arbitrage(pair, exchange, exch_a['ask.price'], compare_exchange,
+                                                  exch_b['bid.price'], amount_to_buy)
+                        if exch_b['ask.price'] < exch_a['bid.price']:
+                            amount_to_buy = min(exch_b['ask.volume'], exch_a['bid.volume'])
+                            self.record_arbitrage(pair, compare_exchange, exch_b['ask.price'], exchange,
+                                                  exch_a['bid.price'], amount_to_buy)
+        except Exception as e:
+            print(e)
+            time.sleep(2)
 
     def record_arbitrage (self, pair, buy_exchange, buy_price, sell_exchange, sell_price, amount):
         profit_percent = sell_price / buy_price - 1
