@@ -1,10 +1,11 @@
+import datetime
+
 from elasticsearch import Elasticsearch
-import asyncio
 import time
 
 class SimpleArbitrageStrategy:
     def __init__(self):
-        self.es = Elasticsearch(http_auth=("cryptobot", "kukuriku99"))
+        self.es = Elasticsearch([{"host":"10.0.0.55"}], http_auth=("cryptobot", "kukuriku99"))
 
     def get_pairs(self):
         body = {
@@ -69,23 +70,37 @@ class SimpleArbitrageStrategy:
         table = self.create_comparison_table()
         for pair in table:
             exchanges = table[pair]
-            max_ask = 0
-            ask_volume = 0
-            buy_on = ""
-            min_bid = 10000000
-            bid_volume = 0
-            sell_on = ""
             for exchange in exchanges:
-                if exchanges[exchange]['ask.price'] > max_ask:
-                    max_ask = exchanges[exchange]['ask.price']
-                    ask_volume = exchanges[exchange]['ask.volume']
-                    sell_on = exchange
-                if exchanges[exchange]['bid.price'] < min_bid:
-                    min_bid = exchanges[exchange]['bid.price']
-                    bid_volume = exchanges[exchange]['bid.volume']
-                    buy_on = exchange
-            if min_bid > max_ask > 0:
-                print('found arbitrage')
+                for compare_exchange in exchanges:
+                    if compare_exchange == exchange:
+                        continue
+                    exch_a = exchanges[exchange]
+                    exch_b = exchanges[compare_exchange]
+                    if exch_a['ask.price'] < exch_b['bid.price']:
+                        amount_to_buy = min(exch_a['ask.volume'], exch_b['bid.volume'])
+                        self.record_arbitrage(pair, exchange, exch_a['ask.price'], compare_exchange,
+                                              exch_b['bid.price'], amount_to_buy)
+                    if exch_b['ask.price'] < exch_a['bid.price']:
+                        amount_to_buy = min(exch_b['ask.volume'], exch_a['bid.volume'])
+                        self.record_arbitrage(pair, compare_exchange, exch_b['ask.price'], exchange,
+                                              exch_a['bid.price'], amount_to_buy)
+
+    def record_arbitrage (self, pair, buy_exchange, buy_price, sell_exchange, sell_price, amount):
+        profit_percent = sell_price / buy_price - 1
+        now = datetime.datetime.utcnow()
+        doc = {
+            "timestamp": now,
+            "pair": pair,
+            "strategy": "arbitrage",
+            "buy.exchange": buy_exchange,
+            "buy.price": buy_price,
+            "sell.exchange": sell_exchange,
+            "sell.price": sell_price,
+            "profit.amount": amount * (sell_price - buy_price),
+            "profit.percent": profit_percent
+        }
+        print(doc)
+        self.es.index(index="crypto-strategy", id=str(now.timestamp()) + "arbitrage" + pair, document=doc)
 
     def run(self):
         while True:
