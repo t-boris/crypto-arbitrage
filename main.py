@@ -92,8 +92,8 @@ class SimpleArbitrageStrategy:
             time.sleep(2)
 
     def record_arbitrage(self, pair, buy_exchange, buy_price, buy_fee, sell_exchange, sell_price, sell_fee, amount):
-        bought_price = amount * buy_price * (1 - buy_fee if buy_fee is not None else 0)
-        sold_price = amount * sell_price * (1 - sell_fee if sell_fee is not None else 0)
+        bought_price = amount * buy_price * (1 - (buy_fee if buy_fee is not None else 0))
+        sold_price = amount * sell_price * (1 - (sell_fee if sell_fee is not None else 0))
         profit_percent = sold_price / bought_price - 1
         if profit_percent <=0:
             return
