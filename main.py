@@ -54,7 +54,8 @@ class SimpleArbitrageStrategy:
                     "ask.price": hit['_source']['ask.price'],
                     "bid.price": hit['_source']['bid.price'],
                     "ask.volume": hit['_source']['ask.volume'],
-                    "bid.volume": hit['_source']['bid.volume']
+                    "bid.volume": hit['_source']['bid.volume'],
+                    "fee": hit['_source']['fee.percent']
                 }
         return table
 
@@ -80,18 +81,22 @@ class SimpleArbitrageStrategy:
                         exch_b = exchanges[compare_exchange]
                         if exch_a['ask.price'] < exch_b['bid.price']:
                             amount_to_buy = min(exch_a['ask.volume'], exch_b['bid.volume'])
-                            self.record_arbitrage(pair, exchange, exch_a['ask.price'], compare_exchange,
-                                                  exch_b['bid.price'], amount_to_buy)
+                            self.record_arbitrage(pair, exchange, exch_a['ask.price'], exch_a['fee'],  compare_exchange,
+                                                  exch_b['bid.price'], exch_b['fee'], amount_to_buy)
                         if exch_b['ask.price'] < exch_a['bid.price']:
                             amount_to_buy = min(exch_b['ask.volume'], exch_a['bid.volume'])
-                            self.record_arbitrage(pair, compare_exchange, exch_b['ask.price'], exchange,
-                                                  exch_a['bid.price'], amount_to_buy)
+                            self.record_arbitrage(pair, compare_exchange, exch_b['ask.price'], exch_b['fee'], exchange,
+                                                  exch_a['bid.price'], exch_a['fee'], amount_to_buy)
         except Exception as e:
             print(e)
             time.sleep(2)
 
-    def record_arbitrage (self, pair, buy_exchange, buy_price, sell_exchange, sell_price, amount):
-        profit_percent = sell_price / buy_price - 1
+    def record_arbitrage(self, pair, buy_exchange, buy_price, buy_fee, sell_exchange, sell_price, sell_fee, amount):
+        bought_price = amount * buy_price * (1 - buy_fee if buy_fee is not None else 0)
+        sold_price = amount * sell_price * (1 - sell_fee if sell_fee is not None else 0)
+        profit_percent = sold_price / bought_price - 1
+        if profit_percent <=0:
+            return
         now = datetime.datetime.utcnow()
         doc = {
             "timestamp": now,
