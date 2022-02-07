@@ -110,9 +110,14 @@ class SimpleArbitrageStrategy:
             volume = min(ask_volume_a, bid_volume_b)
             coin_transfer_fee = self.get_transfer_fees(exchange_a['exchange.id'], coin)
             base_transfer_fee = self.get_transfer_fees(exchange_b['exchange.id'], base)
-            base_left = volume * (max_bid_b * (1 - transaction_fee_percent_a) -
-                                  min_ask_a * (1 + transaction_fee_percent_b)) - base_transfer_fee - \
+            try:
+                base_left = volume * (max_bid_b * (1 - transaction_fee_percent_a) -
+                                  min_ask_a * (1 + transaction_fee_percent_b)) - float(base_transfer_fee) - \
                         (float(coin_transfer_fee) * max_bid_a)
+            except Exception as e:
+                print(e)
+                base_left = -1
+
             profit = 100 * base_left / (volume * min_ask_a)
             return {
                 "profit.percent": profit,
@@ -132,9 +137,14 @@ class SimpleArbitrageStrategy:
             volume = min(ask_volume_b, bid_volume_a)
             coin_transfer_fee = self.get_transfer_fees(exchange_b['exchange.id'], coin)
             base_transfer_fee = self.get_transfer_fees(exchange_a['exchange.id'], base)
-            base_left = volume * (max_bid_a * (1 - transaction_fee_percent_a) -
-                                  min_ask_b * (1 + transaction_fee_percent_b)) - base_transfer_fee - \
-                        (float(coin_transfer_fee) * max_bid_b)
+            try:
+                base_left = volume * (max_bid_a * (1 - transaction_fee_percent_a) -
+                                      min_ask_b * (1 + transaction_fee_percent_b)) - float(base_transfer_fee) - \
+                            (float(coin_transfer_fee) * max_bid_b)
+            except Exception as e:
+                print(e)
+                base_left = -1
+
             profit = 100 * base_left / (volume * min_ask_b)
             return {
                 "profit.percent": profit,
